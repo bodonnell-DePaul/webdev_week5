@@ -189,3 +189,6 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+backend/BookAPI/bookapi.db
+backend/BookAPI/bookapi.db-shm
+backend/BookAPI/bookapi.db-wal
