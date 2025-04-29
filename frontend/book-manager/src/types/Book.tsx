@@ -5,6 +5,9 @@ interface Book {
   year: number;
   genre: string;
   isAvailable: boolean;
+  publisherId: number;
+  publisher: string;
+  audioBookAvailable: boolean;
 }
 
 export default Book;

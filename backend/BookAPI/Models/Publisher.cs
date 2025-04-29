@@ -7,5 +7,6 @@ public class Publisher
     public string Location { get; set; } = string.Empty;
     
     // Navigation property
+    [System.Text.Json.Serialization.JsonIgnore] 
     public ICollection<Book> Books { get; set; } = new List<Book>();
 }
