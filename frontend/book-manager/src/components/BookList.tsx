@@ -76,7 +76,7 @@ const BookList = () => {
                 <td>{book.author}</td>
                 <td>{book.year}</td>
                 <td>{book.genre}</td>
-                <td>{book.publisher}</td>
+                <td>{book.publisher.name}</td>
                 <td>
                   <button 
                     className={book.audioBookAvailable ? 'status-available' : 'status-unavailable'}

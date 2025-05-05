@@ -1,3 +1,5 @@
+import Publisher from "./Publisher";
+
 interface Book {
   id?: number;
   title: string;
@@ -6,7 +8,7 @@ interface Book {
   genre: string;
   isAvailable: boolean;
   publisherId: number;
-  publisher: string;
+  publisher: Publisher;
   audioBookAvailable: boolean;
 }
 
