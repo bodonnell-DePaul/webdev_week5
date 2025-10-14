@@ -233,6 +233,10 @@ public interface IWeatherService
     // Returns null if the city is not found or if there's an API error
     Task<WeatherInfo?> GetCurrentWeatherAsync(string city);
     
+    // Get 5-day weather forecast for a specific city
+    // Returns null if the city is not found or if there's an API error
+    Task<WeatherForecast5Day?> GetForecastAsync(string city);
+    
     // Get todos that might be affected by weather conditions
     // This demonstrates combining external API data with our local todo data
     Task<IEnumerable<Todo>> GetWeatherSensitiveTodosAsync();
@@ -319,6 +323,58 @@ public class WeatherService : IWeatherService
         }
     }
     
+    public async Task<WeatherForecast5Day?> GetForecastAsync(string city)
+    {
+        try
+        {
+            _logger.LogInformation("Fetching 5-day forecast for city: {City}", city);
+            
+            // Build the API URL - wttr.in provides weather forecast data in JSON format
+            var url = $"https://wttr.in/{Uri.EscapeDataString(city)}?format=j1";
+            
+            // Make the HTTP GET request to the weather API
+            var response = await _httpClient.GetAsync(url).ConfigureAwait(false);
+            
+            // Check if the API call was successful
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Weather API returned error status: {StatusCode} for city: {City}", 
+                    response.StatusCode, city);
+                return null;
+            }
+            
+            // Read the JSON response from the API
+            var jsonContent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            
+            // Deserialize the JSON into our model classes
+            var apiResponse = System.Text.Json.JsonSerializer.Deserialize<WttrApiResponse>(jsonContent, 
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            
+            // Convert the API response format to our internal forecast format
+            return MapApiResponseToForecast(apiResponse, city);
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Network error when fetching forecast for city: {City}", city);
+            return null;
+        }
+        catch (TaskCanceledException ex)
+        {
+            _logger.LogError(ex, "Timeout when fetching forecast for city: {City}", city);
+            return null;
+        }
+        catch (System.Text.Json.JsonException ex)
+        {
+            _logger.LogError(ex, "Failed to parse forecast API response for city: {City}", city);
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error when fetching forecast for city: {City}", city);
+            return null;
+        }
+    }
+    
     public async Task<IEnumerable<Todo>> GetWeatherSensitiveTodosAsync()
     {
         try
@@ -394,6 +450,52 @@ public class WeatherService : IWeatherService
     private static int ParseIntSafely(string value, int defaultValue)
     {
         return int.TryParse(value, out var result) ? result : defaultValue;
+    }
+    
+    // Private helper method to map the external API response to our forecast model
+    private WeatherForecast5Day? MapApiResponseToForecast(WttrApiResponse? apiResponse, string requestedCity)
+    {
+        // Validate that we have the required forecast data from the API
+        if (apiResponse?.Weather?.Length == 0 || apiResponse?.Weather == null)
+        {
+            _logger.LogWarning("Invalid or empty forecast data received for city: {City}", requestedCity);
+            return null;
+        }
+        
+        // Extract location name from API response, fallback to requested city name
+        var locationName = apiResponse?.Nearest_area?.FirstOrDefault()?.AreaName?.FirstOrDefault()?.Value 
+                          ?? requestedCity;
+        
+        var forecast = new WeatherForecast5Day
+        {
+            Location = locationName,
+            RetrievedAt = DateTime.UtcNow,
+            Days = new List<WeatherForecastDay>()
+        };
+        
+        // Process each forecast day (typically 5 days)
+        foreach (var day in apiResponse.Weather.Take(5))
+        {
+            if (DateTime.TryParse(day.Date, out var forecastDate))
+            {
+                // Use the first hourly entry for general day conditions
+                var dayConditions = day.Hourly?.FirstOrDefault();
+                
+                forecast.Days.Add(new WeatherForecastDay
+                {
+                    Date = forecastDate,
+                    MaxTemperature = ParseIntSafely(day.MaxtempC, 0),
+                    MinTemperature = ParseIntSafely(day.MintempC, 0),
+                    Description = dayConditions?.WeatherDesc?.FirstOrDefault()?.Value ?? "Unknown",
+                    ConditionCode = dayConditions?.WeatherCode ?? "0",
+                    Humidity = ParseIntSafely(dayConditions?.Humidity ?? "0", 0),
+                    WindSpeedKmh = ParseIntSafely(dayConditions?.WindspeedKmph ?? "0", 0),
+                    ChanceOfRain = ParseIntSafely(dayConditions?.ChanceOfRain ?? "0", 0)
+                });
+            }
+        }
+        
+        return forecast;
     }
     
     // Helper method to check if text contains any weather-related keywords

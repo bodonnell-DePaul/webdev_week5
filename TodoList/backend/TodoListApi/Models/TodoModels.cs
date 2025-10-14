@@ -25,8 +25,11 @@ public class Todo
     public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
     
     public DateTime? DueDate { get; set; }
-    
+
     public List<string> Tags { get; set; } = new();
+    
+    [StringLength(100)]
+    public string? AssignedTo { get; set; } // New property for user assignment
 }
 
 public enum Priority
@@ -63,6 +66,47 @@ public class WeatherInfo
     public int WindSpeedKmh { get; set; }
 }
 
+// Represents a single day's forecast information
+public class WeatherForecastDay
+{
+    // The date for this forecast
+    public DateTime Date { get; set; }
+    
+    // Maximum temperature for the day in Celsius
+    public int MaxTemperature { get; set; }
+    
+    // Minimum temperature for the day in Celsius
+    public int MinTemperature { get; set; }
+    
+    // Weather description for the day
+    public string Description { get; set; } = string.Empty;
+    
+    // Weather condition code
+    public string ConditionCode { get; set; } = string.Empty;
+    
+    // Humidity percentage
+    public int Humidity { get; set; }
+    
+    // Wind speed in km/h
+    public int WindSpeedKmh { get; set; }
+    
+    // Probability of precipitation (0-100%)
+    public int ChanceOfRain { get; set; }
+}
+
+// Container for 5-day weather forecast
+public class WeatherForecast5Day
+{
+    // The city/location for this forecast
+    public string Location { get; set; } = string.Empty;
+    
+    // Array of forecast days (typically 5 days)
+    public List<WeatherForecastDay> Days { get; set; } = new();
+    
+    // When this forecast data was retrieved
+    public DateTime RetrievedAt { get; set; } = DateTime.UtcNow;
+}
+
 // This model represents the raw JSON response from wttr.in API
 // We'll deserialize the API response into this class first, then map to WeatherInfo
 public class WttrApiResponse
@@ -93,10 +137,23 @@ public class WeatherDesc
     public string Value { get; set; } = string.Empty;   // The actual description text
 }
 
-// Forecast data structure (we'll use this for the location name)
+// Forecast data structure from wttr.in API
 public class WeatherForecast
 {
     public string Date { get; set; } = string.Empty;
+    public string MaxtempC { get; set; } = "0";
+    public string MintempC { get; set; } = "0";
+    public HourlyData[]? Hourly { get; set; }
+}
+
+// Hourly weather data within a forecast day
+public class HourlyData
+{
+    public string Humidity { get; set; } = "0";
+    public string WindspeedKmph { get; set; } = "0";
+    public string ChanceOfRain { get; set; } = "0";
+    public WeatherDesc[]? WeatherDesc { get; set; }
+    public string WeatherCode { get; set; } = "0";
 }
 
 // Contains location information from the API response

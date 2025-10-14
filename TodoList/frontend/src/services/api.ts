@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Todo, Category, TodoStats, Priority } from '../types';
+import { Todo, Category, TodoStats, Priority, WeatherInfo, WeatherForecast5Day } from '../types';
 
 const API_BASE_URL = 'http://localhost:5001/api';
 
@@ -230,6 +230,27 @@ export const categoryApi = {
   // Delete category
   async deleteCategory(id: string): Promise<void> {
     await apiRequest(`/categories/${id}`, 'DELETE');
+  }
+};
+
+// Weather API functions
+export const weatherApi = {
+  // Get current weather for a city
+  async getCurrentWeather(city: string): Promise<WeatherInfo> {
+    const response = await apiRequest<WeatherInfo>(`/weather/current/${encodeURIComponent(city)}`);
+    return response;
+  },
+
+  // Get 5-day weather forecast for a city
+  async getForecast(city: string): Promise<WeatherForecast5Day> {
+    const response = await apiRequest<WeatherForecast5Day>(`/weather/forecast/${encodeURIComponent(city)}`);
+    return response;
+  },
+
+  // Get weather-sensitive todos
+  async getWeatherSensitiveTodos(): Promise<Todo[]> {
+    const response = await apiRequest<TodoResponse[]>('/weather/todos');
+    return response.map(mapTodoResponse);
   }
 };
 

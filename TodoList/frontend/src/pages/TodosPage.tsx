@@ -3,6 +3,7 @@ import { usePageTitle } from '../hooks/usePageTitle';
 import { useTodos } from '../context/TodoContext';
 import { useTodoFilter } from '../hooks/useTodoFilter';
 import { Todo, Priority } from '../types';
+import WeatherWidget from '../components/WeatherWidget';
 
 const TodosPage = () => {
   usePageTitle('Todos');
@@ -126,6 +127,8 @@ const TodosPage = () => {
           {showAddForm ? 'Cancel' : '+ Add Todo'}
         </button>
       </div>
+
+      <WeatherWidget />
 
       <div className="filters-section">
         <div className="search-bar">

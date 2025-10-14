@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using TodoListApi.DTOs;
 using TodoListApi.Models;
 using TodoListApi.Services;
+using TodoListApi.Data;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,9 +29,16 @@ builder.Services.AddCors(options =>
     });
 });
 
+// Add EF Core with SQLite
+builder.Services.AddDbContext<TodoDbContext>(options =>
+    options.UseSqlite(builder.Configuration.GetConnectionString("SqliteConnection")));
+
 // Register services
-builder.Services.AddSingleton<ICategoryService, InMemoryCategoryService>();
-builder.Services.AddSingleton<ITodoService, InMemoryTodoService>();
+//builder.Services.AddSingleton<ICategoryService, InMemoryCategoryService>();
+//builder.Services.AddSingleton<ITodoService, InMemoryTodoService>();
+builder.Services.AddScoped<ICategoryService, EfCategoryService>();
+builder.Services.AddScoped<ITodoService, EfTodoService>();
+
 
 // Register HttpClient for making external API calls
 // This provides a managed HttpClient with proper disposal and configuration
@@ -49,6 +58,13 @@ builder.Services.AddHttpClient<IWeatherService, WeatherService>(client =>
 // builder.Services.AddHttpClient(); // Registers IHttpClientFactory
 
 var app = builder.Build();
+
+// Ensure database is created with seed data
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<TodoDbContext>();
+    dbContext.Database.EnsureCreated();
+}
 
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
@@ -402,6 +418,34 @@ weatherGroup.MapGet("/current/{city}", async (string city, IWeatherService weath
 .WithDescription("Retrieves current weather information for the specified city using the wttr.in API")
 .Produces<WeatherInfo>(200)      // Documents successful response type
 .Produces(400)                   // Documents bad request response
+.Produces(404);
+
+// GET /api/weather/forecast/{city} - Get 5-day weather forecast for a specific city
+weatherGroup.MapGet("/forecast/{city}", async (string city, IWeatherService weatherService) =>
+{
+    // Input validation - ensure the city parameter is not empty
+    if (string.IsNullOrWhiteSpace(city))
+    {
+        return Results.BadRequest("City parameter is required and cannot be empty");
+    }
+    
+    // Call our weather service to get 5-day forecast data
+    var forecast = await weatherService.GetForecastAsync(city);
+    
+    // Handle the case where forecast data is not available
+    if (forecast == null)
+    {
+        return Results.NotFound($"Weather forecast not available for city: {city}");
+    }
+    
+    // Return the forecast data as JSON
+    return Results.Ok(forecast);
+})
+.WithName("GetWeatherForecast")
+.WithSummary("Get 5-day weather forecast for a city")
+.WithDescription("Retrieves 5-day weather forecast for the specified city using the wttr.in API")
+.Produces<WeatherForecast5Day>(200)
+.Produces(400)
 .Produces(404);                  // Documents not found response
 
 // GET /api/weather/todos - Get weather-sensitive todos

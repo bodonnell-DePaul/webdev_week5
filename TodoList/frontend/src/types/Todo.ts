@@ -38,3 +38,31 @@ export interface FilterOptions {
 }
 
 export type Priority = 'low' | 'medium' | 'high' | 'urgent';
+
+// Weather-related types
+export interface WeatherInfo {
+  location: string;
+  temperature: number;
+  description: string;
+  retrievedAt: string;
+  conditionCode: string;
+  humidity: number;
+  windSpeedKmh: number;
+}
+
+export interface WeatherForecastDay {
+  date: string;
+  maxTemperature: number;
+  minTemperature: number;
+  description: string;
+  conditionCode: string;
+  humidity: number;
+  windSpeedKmh: number;
+  chanceOfRain: number;
+}
+
+export interface WeatherForecast5Day {
+  location: string;
+  days: WeatherForecastDay[];
+  retrievedAt: string;
+}
