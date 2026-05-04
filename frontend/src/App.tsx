@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import './App.css'
 import { beginLogin, clearSession, completeLogin, getApiBaseUrl, getSession } from './services/auth'
 import { fetchParks } from './services/parks'
@@ -14,16 +14,16 @@ function App() {
     return () => window.removeEventListener('popstate', onPopState)
   }, [])
 
-  function navigate(nextPath: string) {
+  const navigate = useCallback((nextPath: string) => {
     window.history.pushState(null, '', nextPath)
     setPath(nextPath)
-  }
+  }, [])
 
-  function signOut() {
+  const signOut = useCallback(() => {
     clearSession()
     setSession(null)
     navigate('/')
-  }
+  }, [navigate])
 
   return (
     <div className="app-shell">
@@ -182,15 +182,13 @@ function ParksPage({ session }: { session: Session | null }) {
   const [stateFilter, setStateFilter] = useState('')
   const [query, setQuery] = useState('')
   const [error, setError] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     if (!session) {
       return
     }
 
-    setIsLoading(true)
-    setError('')
     fetchParks(session, stateFilter, query)
       .then(setParks)
       .catch((requestError: Error) => setError(requestError.message))
@@ -216,7 +214,11 @@ function ParksPage({ session }: { session: Session | null }) {
             maxLength={2}
             placeholder="UT"
             value={stateFilter}
-            onChange={(event) => setStateFilter(event.target.value.toUpperCase())}
+            onChange={(event) => {
+              setIsLoading(true)
+              setError('')
+              setStateFilter(event.target.value.toUpperCase())
+            }}
           />
         </label>
         <label>
@@ -224,7 +226,11 @@ function ParksPage({ session }: { session: Session | null }) {
           <input
             placeholder="hiking, canyon, geyser..."
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => {
+              setIsLoading(true)
+              setError('')
+              setQuery(event.target.value)
+            }}
           />
         </label>
       </form>
@@ -271,13 +277,14 @@ function ParkCard({ park }: { park: NationalPark }) {
 }
 
 function CallbackPage({ onSession, onNavigate }: { onSession: (session: Session) => void; onNavigate: (path: string) => void }) {
-  const [message, setMessage] = useState('Completing OAuth sign-in...')
+  const parameters = useMemo(() => new URLSearchParams(window.location.search), [])
+  const code = parameters.get('code')
+  const [message, setMessage] = useState(
+    code ? 'Completing OAuth sign-in...' : 'The authorization server did not return a code.',
+  )
 
   useEffect(() => {
-    const parameters = new URLSearchParams(window.location.search)
-    const code = parameters.get('code')
     if (!code) {
-      setMessage('The authorization server did not return a code.')
       return
     }
 
@@ -288,7 +295,7 @@ function CallbackPage({ onSession, onNavigate }: { onSession: (session: Session)
         onNavigate('/dashboard')
       })
       .catch((error: Error) => setMessage(error.message))
-  }, [onNavigate, onSession])
+  }, [code, onNavigate, onSession, parameters])
 
   return (
     <section className="content-card">
