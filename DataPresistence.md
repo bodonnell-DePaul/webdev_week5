@@ -1,5 +1,3 @@
-# webdev_week5
-
 # Data Persistence Options for .NET Web Applications
 
 ## Current Project Context
